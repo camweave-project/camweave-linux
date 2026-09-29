@@ -240,7 +240,9 @@ static void reply(GOutputStream *out, guint status, const gchar *reason,
         "Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'unsafe-inline'; "
         "script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'\r\nConnection: close\r\n\r\n",
         status, reason, content_type, length);
-    if (write_text(out, header)) write_bytes(out, body, length);
+    gboolean wrote = write_text(out, header);
+    if (wrote) wrote = write_bytes(out, body, length);
+    if (g_getenv("CAMWEAVE_TEST_SOURCE")) g_message("HTTP %u written=%d", status, wrote);
 }
 
 static gchar *read_header(GInputStream *in) {
@@ -335,6 +337,7 @@ static gpointer client_thread(gpointer data) {
         reply(out, 400, "Bad Request", "text/plain; charset=utf-8", "Bad request"); goto finish;
     }
     g_auto(GStrv) target = g_strsplit(first[1], "?", 2);
+    if (g_getenv("CAMWEAVE_TEST_SOURCE")) g_message("Request %s %s", first[0], target[0]);
     g_autofree gchar *token = NULL;
     g_mutex_lock(&app->mutex);
     token = g_strdup(app->token);
@@ -418,6 +421,7 @@ static gboolean on_incoming(GSocketService *service, GSocketConnection *connecti
     gboolean allowed = app->running && app->clients < 24;
     if (allowed) app->clients++;
     g_mutex_unlock(&app->mutex);
+    if (g_getenv("CAMWEAVE_TEST_SOURCE")) g_message("Incoming allowed=%d", allowed);
     if (!allowed) { g_io_stream_close(G_IO_STREAM(connection), NULL, NULL); return TRUE; }
     Client *client = g_new0(Client, 1);
     client->app = app;
