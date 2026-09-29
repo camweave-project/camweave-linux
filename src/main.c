@@ -408,8 +408,10 @@ finish:
     g_object_unref(connection);
     g_mutex_lock(&app->mutex);
     app->clients--;
+    guint remaining = app->clients;
     g_cond_broadcast(&app->frame_ready);
     g_mutex_unlock(&app->mutex);
+    if (g_getenv("CAMWEAVE_TEST_SOURCE")) g_message("Client done; remaining=%u", remaining);
     g_free(client);
     return NULL;
 }
@@ -420,8 +422,9 @@ static gboolean on_incoming(GSocketService *service, GSocketConnection *connecti
     g_mutex_lock(&app->mutex);
     gboolean allowed = app->running && app->clients < 24;
     if (allowed) app->clients++;
+    guint clients = app->clients;
     g_mutex_unlock(&app->mutex);
-    if (g_getenv("CAMWEAVE_TEST_SOURCE")) g_message("Incoming allowed=%d", allowed);
+    if (g_getenv("CAMWEAVE_TEST_SOURCE")) g_message("Incoming allowed=%d clients=%u", allowed, clients);
     if (!allowed) { g_io_stream_close(G_IO_STREAM(connection), NULL, NULL); return TRUE; }
     Client *client = g_new0(Client, 1);
     client->app = app;
@@ -429,6 +432,17 @@ static gboolean on_incoming(GSocketService *service, GSocketConnection *connecti
     GThread *thread = g_thread_new("camweave-client", client_thread, client);
     g_thread_unref(thread);
     return TRUE;
+}
+
+static gboolean heartbeat(gpointer data) {
+    App *app = data;
+    g_mutex_lock(&app->mutex);
+    guint clients = app->clients;
+    gboolean running = app->running;
+    g_mutex_unlock(&app->mutex);
+    g_message("Heartbeat running=%d service=%d clients=%u", running,
+              app->service ? g_socket_service_is_active(app->service) : -1, clients);
+    return G_SOURCE_CONTINUE;
 }
 
 static gboolean is_capture_device(const gchar *path) {
@@ -682,6 +696,7 @@ int main(int argc, char **argv) {
     if (!app.html) app.html = g_strdup("<html><body><h1>CamWeave viewer unavailable</h1></body></html>");
     GtkApplication *application = gtk_application_new("com.camweave.Camera", G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(application, "activate", G_CALLBACK(activate), &app);
+    if (g_getenv("CAMWEAVE_TEST_SOURCE")) g_timeout_add_seconds(1, heartbeat, &app);
     int result = g_application_run(G_APPLICATION(application), argc, argv);
     g_mutex_lock(&app.mutex);
     while (app.clients > 0) g_cond_wait(&app.frame_ready, &app.mutex);
