@@ -322,19 +322,16 @@ done:
     g_mutex_unlock(&app->mutex);
 }
 
-static gpointer client_thread(gpointer data) {
-    Client *client = data;
-    App *app = client->app;
-    GSocketConnection *connection = client->connection;
+static void handle_request(App *app, GSocketConnection *connection) {
     g_socket_set_timeout(g_socket_connection_get_socket(connection), 10);
     GInputStream *in = g_io_stream_get_input_stream(G_IO_STREAM(connection));
     GOutputStream *out = g_io_stream_get_output_stream(G_IO_STREAM(connection));
     g_autofree gchar *header = read_header(in);
-    if (!header) { reply(out, 431, "Request Header Fields Too Large", "text/plain; charset=utf-8", "Request too large"); goto finish; }
+    if (!header) { reply(out, 431, "Request Header Fields Too Large", "text/plain; charset=utf-8", "Request too large"); return; }
     g_auto(GStrv) lines = g_strsplit(header, "\r\n", -1);
     g_auto(GStrv) first = g_strsplit(lines[0], " ", -1);
     if (g_strv_length(first) != 3 || g_strcmp0(first[2], "HTTP/1.1") != 0 || first[1][0] != '/') {
-        reply(out, 400, "Bad Request", "text/plain; charset=utf-8", "Bad request"); goto finish;
+        reply(out, 400, "Bad Request", "text/plain; charset=utf-8", "Bad request"); return;
     }
     g_auto(GStrv) target = g_strsplit(first[1], "?", 2);
     if (g_getenv("CAMWEAVE_TEST_SOURCE")) g_message("Request %s %s", first[0], target[0]);
@@ -345,12 +342,12 @@ static gpointer client_thread(gpointer data) {
     g_autofree gchar *base = g_strdup_printf("/watch/%s", token ? token : "");
     g_autofree gchar *prefix = g_strconcat(base, "/", NULL);
     if (!token || (g_strcmp0(target[0], base) != 0 && !g_str_has_prefix(target[0], prefix))) {
-        reply(out, 404, "Not Found", "text/plain; charset=utf-8", "Use the complete viewing link"); goto finish;
+        reply(out, 404, "Not Found", "text/plain; charset=utf-8", "Use the complete viewing link"); return;
     }
     g_autofree gchar *settings = g_strconcat(base, "/settings", NULL);
     if (g_strcmp0(target[0], settings) == 0) {
         if (g_strcmp0(first[0], "POST") != 0) {
-            reply(out, 405, "Method Not Allowed", "text/plain; charset=utf-8", "POST required"); goto finish;
+            reply(out, 405, "Method Not Allowed", "text/plain; charset=utf-8", "POST required"); return;
         }
         gboolean control = FALSE;
         for (guint i = 1; lines[i]; i++) {
@@ -359,10 +356,10 @@ static gpointer client_thread(gpointer data) {
                 control = g_strcmp0(g_strstrip(value), "1") == 0;
             }
         }
-        if (!control) { reply(out, 403, "Forbidden", "text/plain; charset=utf-8", "Control header required"); goto finish; }
+        if (!control) { reply(out, 403, "Forbidden", "text/plain; charset=utf-8", "Control header required"); return; }
         guint quality = 0, fps = 0;
         if (!parse_settings(target[1], &quality, &fps)) {
-            reply(out, 400, "Bad Request", "text/plain; charset=utf-8", "Unsupported quality or FPS"); goto finish;
+            reply(out, 400, "Bad Request", "text/plain; charset=utf-8", "Unsupported quality or FPS"); return;
         }
         g_mutex_lock(&app->mutex);
         app->quality = quality;
@@ -370,10 +367,10 @@ static gpointer client_thread(gpointer data) {
         g_mutex_unlock(&app->mutex);
         g_main_context_invoke(NULL, reconfigure, app);
         reply(out, 202, "Accepted", "application/json", "{\"accepted\":true}");
-        goto finish;
+        return;
     }
     if (g_strcmp0(first[0], "GET") != 0) {
-        reply(out, 405, "Method Not Allowed", "text/plain; charset=utf-8", "GET required"); goto finish;
+        reply(out, 405, "Method Not Allowed", "text/plain; charset=utf-8", "GET required"); return;
     }
     if (g_strcmp0(target[0], base) == 0 || g_strcmp0(target[0], prefix) == 0) {
         g_auto(GStrv) pieces = g_strsplit(app->html, "__BASE__", -1);
@@ -403,7 +400,13 @@ static gpointer client_thread(gpointer data) {
             reply(out, 200, "OK", "application/json", json);
         } else reply(out, 404, "Not Found", "text/plain; charset=utf-8", "Not found");
     }
-finish:
+}
+
+static gpointer client_thread(gpointer data) {
+    Client *client = data;
+    App *app = client->app;
+    GSocketConnection *connection = client->connection;
+    handle_request(app, connection);
     g_io_stream_close(G_IO_STREAM(connection), NULL, NULL);
     g_object_unref(connection);
     g_mutex_lock(&app->mutex);
