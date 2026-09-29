@@ -18,7 +18,8 @@ def request(path, method="GET", headers=None):
         with urllib.request.urlopen(req, timeout=8) as response:
             return response.status, response.read(4096)
     except urllib.error.HTTPError as error:
-        return error.code, error.read()
+        with error:
+            return error.code, error.read()
 
 
 def main():
@@ -60,7 +61,8 @@ def main():
             try:
                 urllib.request.urlopen("http://127.0.0.1:8080/watch/wrong/status", timeout=5)
             except urllib.error.HTTPError as error:
-                assert error.code == 404
+                with error:
+                    assert error.code == 404
             else:
                 raise AssertionError("Wrong code was accepted")
             assert request("/status")[0] == 200
