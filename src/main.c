@@ -129,7 +129,7 @@ static GstFlowReturn on_sample(GstAppSink *sink, gpointer data) {
             }
         }
         g_mutex_unlock(&app->mutex);
-        if (preview) {
+        if (preview && !g_getenv("CAMWEAVE_TEST_SOURCE")) {
             PreviewUpdate *update = g_new0(PreviewUpdate, 1);
             update->app = app;
             update->bytes = g_bytes_ref(bytes);
