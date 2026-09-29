@@ -48,6 +48,14 @@ def main():
                 raise RuntimeError("Camera did not start listening")
 
             assert json.loads(payload)["quality"] == 720
+            deadline = time.monotonic() + 10
+            while time.monotonic() < deadline:
+                state = json.loads(request("/status")[1])
+                if state["frames"] > 0:
+                    break
+                time.sleep(0.2)
+            else:
+                raise AssertionError("Synthetic camera produced no frames")
             assert request("/")[0] == 200
             try:
                 urllib.request.urlopen("http://127.0.0.1:8080/watch/wrong/status", timeout=5)

@@ -160,6 +160,7 @@ static gboolean bus_message(GstBus *bus, GstMessage *message, gpointer data) {
         GError *error = NULL;
         gchar *debug = NULL;
         gst_message_parse_error(message, &error, &debug);
+        g_warning("Camera pipeline error: %s (%s)", error ? error->message : "unknown", debug ? debug : "no detail");
         g_autofree gchar *text = g_strdup_printf("Camera error: %s", error ? error->message : "unknown error");
         app_stop(app);
         set_status(app, text);
