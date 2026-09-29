@@ -133,7 +133,7 @@ static GstFlowReturn on_sample(GstAppSink *sink, gpointer data) {
             PreviewUpdate *update = g_new0(PreviewUpdate, 1);
             update->app = app;
             update->bytes = g_bytes_ref(bytes);
-            g_main_context_invoke(NULL, show_preview, update);
+            g_idle_add(show_preview, update);
         }
         g_bytes_unref(bytes);
         gst_buffer_unmap(buffer, &map);
@@ -365,7 +365,7 @@ static void handle_request(App *app, GSocketConnection *connection) {
         app->quality = quality;
         app->fps = fps;
         g_mutex_unlock(&app->mutex);
-        g_main_context_invoke(NULL, reconfigure, app);
+        g_idle_add(reconfigure, app);
         reply(out, 202, "Accepted", "application/json", "{\"accepted\":true}");
         return;
     }
@@ -434,17 +434,6 @@ static gboolean on_run(GThreadedSocketService *service, GSocketConnection *conne
     client->connection = g_object_ref(connection);
     client_thread(client);
     return TRUE;
-}
-
-static gboolean heartbeat(gpointer data) {
-    App *app = data;
-    g_mutex_lock(&app->mutex);
-    guint clients = app->clients;
-    gboolean running = app->running;
-    g_mutex_unlock(&app->mutex);
-    g_message("Heartbeat running=%d service=%d clients=%u", running,
-              app->service ? g_socket_service_is_active(app->service) : -1, clients);
-    return G_SOURCE_CONTINUE;
 }
 
 static gboolean is_capture_device(const gchar *path) {
@@ -698,7 +687,6 @@ int main(int argc, char **argv) {
     if (!app.html) app.html = g_strdup("<html><body><h1>CamWeave viewer unavailable</h1></body></html>");
     GtkApplication *application = gtk_application_new("com.camweave.Camera", G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(application, "activate", G_CALLBACK(activate), &app);
-    if (g_getenv("CAMWEAVE_TEST_SOURCE")) g_timeout_add_seconds(1, heartbeat, &app);
     int result = g_application_run(G_APPLICATION(application), argc, argv);
     g_mutex_lock(&app.mutex);
     while (app.clients > 0) g_cond_wait(&app.frame_ready, &app.mutex);
