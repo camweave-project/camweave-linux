@@ -63,6 +63,7 @@ def main():
                 assert error.code == 404
             else:
                 raise AssertionError("Wrong code was accepted")
+            assert request("/status")[0] == 200
             assert request("/settings?quality=1080&fps=15", method="POST")[0] == 403
             assert request("/settings?quality=1080&fps=15", method="POST", headers={"X-Camera-Control": "1"})[0] == 202
             deadline = time.monotonic() + 10

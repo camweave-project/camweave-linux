@@ -480,6 +480,7 @@ static void refresh_cameras(App *app) {
 }
 
 static void app_stop(App *app) {
+    if (g_getenv("CAMWEAVE_TEST_SOURCE")) g_message("App stop requested");
     g_mutex_lock(&app->mutex);
     app->running = FALSE;
     g_cond_broadcast(&app->frame_ready);
