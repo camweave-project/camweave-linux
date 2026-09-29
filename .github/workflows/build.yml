@@ -1,0 +1,19 @@
+name: Linux build and stream check
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build pkg-config libgtk-4-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good xvfb
+      - name: Build
+        run: |
+          meson setup build
+          meson compile -C build
+      - name: Synthetic camera integration
+        run: xvfb-run -a python3 tests/integration.py
