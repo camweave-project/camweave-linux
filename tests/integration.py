@@ -69,6 +69,9 @@ def main():
                 assert response.headers.get_content_type() == "multipart/x-mixed-replace"
                 assert b"--frame" in response.read(80)
             print("CamWeave Linux native capture and browser protocol checks passed")
+        except BaseException:
+            print(f"Camera process exit code: {process.poll()}")
+            raise
         finally:
             process.terminate()
             try:
@@ -76,6 +79,10 @@ def main():
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
+            if process.stdout:
+                output = process.stdout.read()
+                if output:
+                    print("Camera output:\n" + output[-5000:])
 
 
 if __name__ == "__main__":
