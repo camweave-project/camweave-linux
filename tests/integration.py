@@ -1,6 +1,7 @@
 import json
 import os
 import pathlib
+import socket
 import subprocess
 import tempfile
 import time
@@ -65,6 +66,11 @@ def main():
                     assert error.code == 404
             else:
                 raise AssertionError("Wrong code was accepted")
+            with socket.create_connection(("127.0.0.1", 8080), timeout=5) as probe:
+                probe.sendall(b"GET /watch/test-code/status HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+                response = probe.recv(128)
+                print("Raw request after 404:", response[:80])
+                assert response.startswith(b"HTTP/1.1 200")
             assert request("/status")[0] == 200
             assert request("/settings?quality=1080&fps=15", method="POST")[0] == 403
             assert request("/settings?quality=1080&fps=15", method="POST", headers={"X-Camera-Control": "1"})[0] == 202
