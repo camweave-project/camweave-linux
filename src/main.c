@@ -416,7 +416,7 @@ finish:
     return NULL;
 }
 
-static gboolean on_incoming(GSocketService *service, GSocketConnection *connection, GObject *source, gpointer data) {
+static gboolean on_run(GThreadedSocketService *service, GSocketConnection *connection, GObject *source, gpointer data) {
     (void)service; (void)source;
     App *app = data;
     g_mutex_lock(&app->mutex);
@@ -429,8 +429,7 @@ static gboolean on_incoming(GSocketService *service, GSocketConnection *connecti
     Client *client = g_new0(Client, 1);
     client->app = app;
     client->connection = g_object_ref(connection);
-    GThread *thread = g_thread_new("camweave-client", client_thread, client);
-    g_thread_unref(thread);
+    client_thread(client);
     return TRUE;
 }
 
@@ -533,8 +532,8 @@ static void app_start(App *app) {
         g_autofree gchar *message = g_strdup_printf("Cannot start camera: %s", error ? error->message : "unknown error");
         app_stop(app); set_status(app, message); g_clear_error(&error); return;
     }
-    app->service = g_socket_service_new();
-    g_signal_connect(app->service, "incoming", G_CALLBACK(on_incoming), app);
+    app->service = G_SOCKET_SERVICE(g_threaded_socket_service_new(24));
+    g_signal_connect(app->service, "run", G_CALLBACK(on_run), app);
     if (!g_socket_listener_add_inet_port(G_SOCKET_LISTENER(app->service), 8080, NULL, &error)) {
         g_autofree gchar *message = g_strdup_printf("Cannot listen on port 8080: %s", error ? error->message : "unknown error");
         app_stop(app); set_status(app, message); g_clear_error(&error); return;
