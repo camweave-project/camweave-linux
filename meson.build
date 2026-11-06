@@ -7,3 +7,6 @@ data_dir = join_paths(get_option('prefix'), get_option('datadir'), 'camweave')
 executable('camweave-camera', 'src/main.c', dependencies: [gtk, gst, gstapp],
   c_args: ['-DAPP_DATA_DIR="' + data_dir + '"'], install: true)
 install_data('web/watch.html', install_dir: data_dir)
+
+install_data('data/com.camweave.Camera.desktop', install_dir: join_paths(get_option('datadir'), 'applications'))
+install_data('data/com.camweave.Camera.svg', install_dir: join_paths(get_option('datadir'), 'icons', 'hicolor', 'scalable', 'apps'))

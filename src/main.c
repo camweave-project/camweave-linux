@@ -587,7 +587,8 @@ static GtkWidget *card(GtkWidget *parent, const gchar *title) {
 static void activate(GtkApplication *application, gpointer data) {
     App *app = data;
     app->window = gtk_application_window_new(application);
-    gtk_window_set_title(GTK_WINDOW(app->window), "CamWeave Camera");
+    gtk_window_set_title(GTK_WINDOW(app->window), "CameraWeave");
+    gtk_window_set_icon_name(GTK_WINDOW(app->window), "com.camweave.Camera");
     gtk_window_set_default_size(GTK_WINDOW(app->window), 740, 780);
     GtkWidget *scroll = gtk_scrolled_window_new();
     gtk_window_set_child(GTK_WINDOW(app->window), scroll);
@@ -684,7 +685,7 @@ int main(int argc, char **argv) {
     app.devices = g_ptr_array_new_with_free_func(g_free);
     if (!g_file_get_contents("web/watch.html", &app.html, NULL, NULL))
         g_file_get_contents(APP_DATA_DIR "/watch.html", &app.html, NULL, NULL);
-    if (!app.html) app.html = g_strdup("<html><body><h1>CamWeave viewer unavailable</h1></body></html>");
+    if (!app.html) app.html = g_strdup("<html><body><h1>CameraWeave viewer unavailable</h1></body></html>");
     GtkApplication *application = gtk_application_new("com.camweave.Camera", G_APPLICATION_DEFAULT_FLAGS);
     g_signal_connect(application, "activate", G_CALLBACK(activate), &app);
     int result = g_application_run(G_APPLICATION(application), argc, argv);

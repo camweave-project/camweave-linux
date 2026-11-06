@@ -86,7 +86,7 @@ def main():
             with urllib.request.urlopen(BASE + "/stream", timeout=8) as response:
                 assert response.headers.get_content_type() == "multipart/x-mixed-replace"
                 assert b"--frame" in response.read(80)
-            print("CamWeave Linux native capture and browser protocol checks passed")
+            print("CameraWeave Linux native capture and browser protocol checks passed")
         except BaseException:
             print(f"Camera process exit code: {process.poll()}")
             raise

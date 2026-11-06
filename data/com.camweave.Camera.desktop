@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=CameraWeave
+Comment=Turn an existing camera into a private live camera
+Exec=camweave-camera
+Icon=com.camweave.Camera
+Terminal=false
+Categories=AudioVideo;Video;
+Keywords=camera;webcam;monitor;stream;
