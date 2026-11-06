@@ -596,7 +596,7 @@ static void activate(GtkApplication *application, gpointer data) {
     gtk_widget_set_margin_top(body, 28); gtk_widget_set_margin_bottom(body, 28);
     gtk_widget_set_margin_start(body, 28); gtk_widget_set_margin_end(body, 28);
     gtk_scrolled_window_set_child(GTK_SCROLLED_WINDOW(scroll), body);
-    GtkWidget *eyebrow = label("CAMWEAVE / CAMERA", FALSE);
+    GtkWidget *eyebrow = label("CAMERAWEAVE / CAMERA", FALSE);
     gtk_widget_add_css_class(eyebrow, "accent");
     gtk_box_append(GTK_BOX(body), eyebrow);
     GtkWidget *title = label("Give your camera a second life.", TRUE);
